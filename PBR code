@@ -1,0 +1,83 @@
+#include "OneWire.h"
+#include "DallasTemperature.h"
+#define ONE_WIRE_BUS 5
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+
+
+//Port Info
+//int turbSens = 2;
+int stirBar = 3;
+int airPump = 4;
+int heatElement = 6;
+
+//GraphData
+int turbData = 0;
+int constant = 200;
+int time = 0;
+
+int growC = 25;
+bool stirOn = false;
+char data = 0;
+int pumpMode = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  sensors.begin();
+  pinMode(A2, INPUT);
+  pinMode(stirBar, OUTPUT);
+  pinMode(airPump, OUTPUT);
+  pinMode(heatElement, OUTPUT);
+}
+
+void loop() {
+  //Controlling turbidity sensor and air pump behavior
+  turbData = analogRead(A2);
+  while (Serial.available() > 0) {
+    data = Serial.read();
+    //Set stir bar ON or OFF
+    if (data == 'S') {
+      Serial.println("Stir Bar On");
+      stirOn = true;
+    }
+    else if (data == 'O') {
+      Serial.println("Stir Bar off");
+      stirOn = false;
+    }
+    //Set pump speed, 0 -> OFF, 1 -> SLOW, 2, -> FAST
+    if (data == '0') {
+      pumpMode = 0;
+    }
+    if (data == '1') {
+      pumpMode = 100;
+    }
+    if (data == '2') {
+      pumpMode = 200;
+    }
+  }
+  //set stirBar speed
+  if (stirOn == true) {
+      analogWrite(stirBar, 250);
+  }
+  else
+      analogWrite(stirBar, 0);
+  analogWrite(airPump, pumpMode);
+
+  //Graph Stuff
+  Serial.print("Concentration: ");
+  Serial.print(turbData);
+  Serial.print(" Time (s): ");
+  Serial.print(constant);
+  sensors.requestTemperatures();
+  //Temp Logic
+  float tempC = sensors.getTempCByIndex(0);
+  if (tempC < growC) {
+    analogWrite(heatElement, 25);
+  }
+  Serial.print(" Temp: ");
+  Serial.print(tempC);
+
+  Serial.println();
+  delay(1000);
+}
